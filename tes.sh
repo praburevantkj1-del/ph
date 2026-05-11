@@ -106,12 +106,14 @@ echo "    [OK] Apache siap"
 echo "[4/7] Konfigurasi PHP.ini..."
 
 for PHP_INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
-    sed -i 's/^;max_input_vars.*/max_input_vars = 5000/' $PHP_INI
-    sed -i 's/^max_input_vars.*/max_input_vars = 5000/'  $PHP_INI
-    sed -i 's/^post_max_size.*/post_max_size = 256M/'    $PHP_INI
+    # Pakai append langsung biar pasti kena
+    sed -i 's/^post_max_size.*/post_max_size = 256M/'            $PHP_INI
     sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
+    # max_input_vars di-append langsung ke bawah file
+    echo "max_input_vars = 5000" >> $PHP_INI
 done
 
+systemctl restart apache2
 echo "    [OK] PHP.ini siap"
 
 # ============================================================
@@ -177,5 +179,8 @@ echo "Isi form Moodle installer:"
 echo "   DB Driver : MariaDB (native/mariadb) <- BUKAN MySQL!"
 echo "   DB User   : moodleuser"
 echo "   DB Pass   : rp"
+echo ""
+echo "Kalau masih error soal, jalankan:"
+echo "   php /home/moodle/admin/cli/cron.php"
 echo ""
 echo "Selamat ujian! - TKJ SMKN 1 TUREN 2026"
