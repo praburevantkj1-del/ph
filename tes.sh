@@ -1,26 +1,34 @@
 #!/bin/bash
 # ============================================================
 # MOODLE SETUP - TKJ SMKN 1 TUREN
-# Cara pakai: bash moodle.sh
-# Yang manual dulu sebelum jalanin ini:
-#   1. /etc/network/interfaces (IP static)
-#   2. SSH (PermitRootLogin yes)
-#   3. /etc/apt/sources.list (trusted=yes cdrom)
+# curl -s https://raw.githubusercontent.com/praburevantkj1-del/ph/main/tes.sh | bash
+#
+# Yang manual dulu SEBELUM jalanin ini:
+#   1. /etc/network/interfaces  -> IP static 192.168.56.10
+#   2. /etc/ssh/sshd_config     -> PermitRootLogin yes
+#   3. /etc/apt/sources.list    -> [trusted=yes] di cdrom
 #   4. apt-cdrom add DVD1 & DVD2
+#   5. apt update
 # ============================================================
 
-echo "=== MOODLE SETUP - TKJ SMKN 1 TUREN ==="
+echo "==================================="
+echo " MOODLE SETUP - TKJ SMKN 1 TUREN "
+echo "==================================="
+echo ""
 
 # ============================================================
 # 1. INSTALL SEMUA PAKET
 # ============================================================
-echo "[1/6] Install paket..."
+echo "[1/7] Install paket..."
+
 apt install -y bind9 bind9-dnsutils dns-root-data apache2 libapache2-mod-php mariadb-server php8.2 php8.2-cli php8.2-curl php8.2-zip php8.2-gd php8.2-xml php8.2-intl php8.2-mbstring php8.2-soap php8.2-ldap php8.2-mysql php8.2-bcmath zip
 
+echo "    [OK] Paket terinstall"
+
 # ============================================================
-# 2. DNS - named.conf.local
+# 2. DNS
 # ============================================================
-echo "[2/6] Konfigurasi DNS..."
+echo "[2/7] Konfigurasi DNS..."
 
 cat > /etc/bind/named.conf.local << 'EOF'
 zone "ujiankolaborasi.net" {
@@ -32,9 +40,6 @@ zone "56.168.192.in-addr.arpa" {
     file "/etc/bind/db.ip";
 };
 EOF
-
-cp /etc/bind/db.local /etc/bind/db.domain
-cp /etc/bind/db.127 /etc/bind/db.ip
 
 cat > /etc/bind/db.domain << 'EOF'
 $TTL    604800
@@ -65,12 +70,12 @@ $TTL    604800
 EOF
 
 systemctl restart named.service
-echo "    DNS OK"
+echo "    [OK] DNS siap"
 
 # ============================================================
-# 3. APACHE - 000-default.conf
+# 3. APACHE
 # ============================================================
-echo "[3/6] Konfigurasi Apache..."
+echo "[3/7] Konfigurasi Apache..."
 
 a2enmod rewrite setenvif -q
 
@@ -93,71 +98,84 @@ cat > /etc/apache2/sites-available/000-default.conf << 'EOF'
 </VirtualHost>
 EOF
 
-echo "    Apache OK"
+echo "    [OK] Apache siap"
 
 # ============================================================
 # 4. PHP.INI
 # ============================================================
-echo "[4/6] Konfigurasi PHP.ini..."
+echo "[4/7] Konfigurasi PHP.ini..."
 
-sed -i 's/^;max_input_vars.*/max_input_vars = 5000/;s/^post_max_size.*/post_max_size = 256M/;s/^upload_max_filesize.*/upload_max_filesize = 256M/' /etc/php/8.2/apache2/php.ini
-sed -i 's/^;max_input_vars.*/max_input_vars = 5000/;s/^post_max_size.*/post_max_size = 256M/;s/^upload_max_filesize.*/upload_max_filesize = 256M/' /etc/php/8.2/cli/php.ini
+for PHP_INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
+    sed -i 's/^;max_input_vars.*/max_input_vars = 5000/' $PHP_INI
+    sed -i 's/^max_input_vars.*/max_input_vars = 5000/'  $PHP_INI
+    sed -i 's/^post_max_size.*/post_max_size = 256M/'    $PHP_INI
+    sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
+done
 
-echo "    PHP.ini OK"
+echo "    [OK] PHP.ini siap"
 
 # ============================================================
 # 5. MARIADB
 # ============================================================
-echo "[5/6] Konfigurasi MariaDB..."
+echo "[5/7] Konfigurasi MariaDB..."
 
 systemctl start mariadb
 
 mariadb -u root << 'SQLEOF'
 ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('rp');
-CREATE USER IF NOT EXISTS 'moodleuser'@'localhost' IDENTIFIED BY 'rp');
+CREATE USER IF NOT EXISTS 'moodleuser'@'localhost' IDENTIFIED BY 'rp';
 CREATE DATABASE IF NOT EXISTS moodle DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 GRANT ALL PRIVILEGES ON moodle.* TO 'moodleuser'@'localhost';
 FLUSH PRIVILEGES;
 SQLEOF
 
-echo "    MariaDB OK - moodleuser/rp"
+echo "    [OK] MariaDB siap - moodleuser/rp"
 
 # ============================================================
-# 6. EXTRACT MOODLE + CRON (antisipasi error soal)
+# 6. MOODLE FILES
 # ============================================================
-echo "[6/6] Setup Moodle files..."
+echo "[6/7] Setup Moodle files..."
 
 cd /home
 unzip -q moodle-5.0.7.zip 2>/dev/null
 mkdir -p moodledata
-chown -R www-data:www-data moodle moodledata
+chown -R www-data:www-data moodle moodledata 2>/dev/null
 
 systemctl restart apache2 named mariadb
 systemctl enable apache2 named mariadb bind9 2>/dev/null
 
-echo "    Moodle files OK"
+echo "    [OK] Moodle files siap"
+
+# ============================================================
+# 7. CRON.PHP - FIX ERROR TAMBAH SOAL
+# ============================================================
+echo "[7/7] Menjalankan cron.php (fix error tambah soal)..."
+echo "      Ini butuh 5-15 menit, harap tunggu..."
+
+php /home/moodle/admin/cli/cron.php > /dev/null 2>&1
+
+echo "    [OK] Cron selesai, tambah soal sudah bisa!"
 
 # ============================================================
 # SELESAI
 # ============================================================
 echo ""
-echo "================================================"
+echo "==================================="
 echo " SETUP SELESAI!"
-echo "================================================"
+echo "==================================="
 echo ""
 echo "Langkah selanjutnya:"
-echo "1. Set DNS Windows (adapter Host-Only):"
-echo "   IP  : 192.168.56.1 | Subnet: 255.255.255.0"
+echo ""
+echo "1. Set adapter Host-Only Windows:"
+echo "   IP  : 192.168.56.1"
+echo "   Sub : 255.255.255.0"
 echo "   DNS : 192.168.56.10"
 echo ""
 echo "2. Buka browser: http://ujiankolaborasi.net"
 echo ""
-echo "Credential Moodle installer:"
+echo "Isi form Moodle installer:"
 echo "   DB Driver : MariaDB (native/mariadb) <- BUKAN MySQL!"
 echo "   DB User   : moodleuser"
 echo "   DB Pass   : rp"
-echo ""
-echo "Kalau error soal/adhoc task, jalankan:"
-echo "   php /home/moodle/admin/cli/cron.php"
 echo ""
 echo "Selamat ujian! - TKJ SMKN 1 TUREN 2026"
