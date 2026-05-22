@@ -52,14 +52,15 @@ ErrorLog ${APACHE_LOG_DIR}/error.log
 CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
-for PHP_INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
-sed -i 's/^post_max_size.*/post_max_size = 256M/' $PHP_INI
-sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
-echo "max_input_vars = 5000" >> $PHP_INI
-done
+sed -i 's/^post_max_size.*/post_max_size = 256M/' /etc/php/8.2/apache2/php.ini
+sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' /etc/php/8.2/apache2/php.ini
+echo "max_input_vars = 5000" >> /etc/php/8.2/apache2/php.ini
+sed -i 's/^post_max_size.*/post_max_size = 256M/' /etc/php/8.2/cli/php.ini
+sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' /etc/php/8.2/cli/php.ini
+echo "max_input_vars = 5000" >> /etc/php/8.2/cli/php.ini
+systemctl restart apache2
 systemctl start mariadb
-mariadb -u root << 'SQLEOF'
-ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('rp');
+mariadb -u root -prp << 'SQLEOF'
 CREATE USER IF NOT EXISTS 'moodleuser'@'localhost' IDENTIFIED BY 'rp';
 CREATE DATABASE IF NOT EXISTS moodle DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 GRANT ALL PRIVILEGES ON moodle.* TO 'moodleuser'@'localhost';
