@@ -43,8 +43,8 @@ CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
 for PHP_INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
-sed -i 's/^post_max_size.*/post_max_size = 256M/' $PHP_INI
-sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
+echo -i 's/^post_max_size.*/post_max_size = 256M/' $PHP_INI
+echo -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
 echo "max_input_vars = 5000" >> $PHP_INI
 done
 systemctl start mariadb
