@@ -10,6 +10,16 @@ type master;
 file "/etc/bind/db.ip";
 };
 EOF
+cat > /etc/bind/named.conf.options << 'EOF'
+options {
+directory "/var/cache/bind";
+listen-on { any; };
+allow-query { any; };
+recursion yes;
+dnssec-validation auto;
+listen-on-v6 { any; };
+};
+EOF
 cat > /etc/bind/db.domain << 'EOF'
 $TTL 604800
 @ IN SOA ujiankolaborasi.net. root.ujiankolaborasi.net. (2 604800 86400 2419200 604800)
@@ -43,8 +53,8 @@ CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
 for PHP_INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
-echo 's/^post_max_size.*/post_max_size = 256M/' $PHP_INI
-echo 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
+sed -i 's/^post_max_size.*/post_max_size = 256M/' $PHP_INI
+sed -i 's/^upload_max_filesize.*/upload_max_filesize = 256M/' $PHP_INI
 echo "max_input_vars = 5000" >> $PHP_INI
 done
 systemctl start mariadb
